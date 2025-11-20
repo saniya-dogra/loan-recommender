@@ -1,6 +1,4 @@
 import requests
-import json
-import numpy as np
 
 url = "http://127.0.0.1:5000/predict"
 
@@ -9,27 +7,18 @@ data = {
     "income": 60000,
     "credit_score": 720,
     "employment_type": "salaried",
-    "existing_loan": 0
+    "loan_amount": 200000,
+    "loan_tenure": 5,
+    "interest_rate": 11.5
 }
 
 response = requests.post(url, json=data)
+res = response.json()
 
-try:
-    # Convert JSON response to Python dict
-    res = response.json()
+print("\nTop Bank Recommendations:")
+print("---------------------------")
 
-    # Convert any numpy types to native Python types
-    def convert_numpy(obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return obj
-
-    clean_response = {k: convert_numpy(v) for k, v in res.items()}
-    print("Response:", clean_response)
-
-except Exception as e:
-    print("Error:", str(e))
+for i, rec in enumerate(res.get("top_recommendations", []), 1):
+    bank = rec["bank"]
+    prob = rec["probability"] * 100
+    print(f"{i}. {bank} → {prob:.1f}%")

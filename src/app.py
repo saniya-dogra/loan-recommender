@@ -7,22 +7,17 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)
 
-# Load model
+# Load model + encoder
 model = joblib.load("model.pkl")
+le = joblib.load("le.pkl")   # LabelEncoder for bank names
 
-# Single mapping: bank ID → (bank_name, interest_rate)
-bank_mapping = {
-    0: ("SBI", 7.9),
-    1: ("ICICI", 8.0),
-    2: ("HDFC", 8.2),
-    3: ("AXIS", 8.3)
-}
+# Employment mapping
+employment_mapping = {"salaried": 1, "self-employed": 0}
 
 def to_python(obj):
-    """Convert numpy types → python types recursively."""
-    if isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64)):
+    if isinstance(obj, (np.integer, np.int64)):
         return int(obj)
-    if isinstance(obj, (np.floating, np.float32, np.float64)):
+    if isinstance(obj, (np.floating, np.float64)):
         return float(obj)
     if isinstance(obj, dict):
         return {k: to_python(v) for k, v in obj.items()}
@@ -36,27 +31,25 @@ def predict():
         data = request.json
         df = pd.DataFrame([data])
 
-        # Encode employment type if present
-        if "employment_type" in df.columns:
-            df["employment_type"] = df["employment_type"].astype("category").cat.codes
+        # Encode employment type
+        df["employment_type"] = df["employment_type"].map(employment_mapping).fillna(0)
 
-        # Match model feature order
+        # Ensure column order
         feature_names = model.get_booster().feature_names
         for f in feature_names:
-            if f not in df.columns:
+            if f not in df:
                 df[f] = 0
         df = df[feature_names]
 
-        # Prediction
-        pred_id = int(model.predict(df)[0])  # get bank ID
-        recommended_bank, interest_rate = bank_mapping.get(pred_id, ("Unknown", 0.0))
+        probs = model.predict_proba(df)[0]
+        top_indices = np.argsort(probs)[::-1][:3]
 
-        response = {
-            "recommended_bank": recommended_bank,
-            "interest_rate": float(interest_rate)
-        }
+        top_banks = [
+            {"bank": le.inverse_transform([i])[0], "probability": float(probs[i])}
+            for i in top_indices
+        ]
 
-        return jsonify(to_python(response))
+        return jsonify({"top_recommendations": top_banks})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

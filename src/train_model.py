@@ -10,12 +10,11 @@ def train():
     le = LabelEncoder()
     y_encoded = le.fit_transform(y)
 
-    # Save bank number → bank name
-    bank_mapping = dict(enumerate(le.classes_))
-    joblib.dump(bank_mapping, "bank_mapping.pkl")
-    print("bank_mapping.pkl saved")
+    # Save the label encoder
+    joblib.dump(le, "le.pkl")
+    print("le.pkl saved")
 
-    # Train XGBoost model
+    # Train the model
     model = XGBClassifier(
         n_estimators=120,
         max_depth=6,
@@ -24,10 +23,8 @@ def train():
         colsample_bytree=0.9,
         random_state=42
     )
-
     model.fit(X, y_encoded)
 
-    # Save model
     joblib.dump(model, "model.pkl")
     print("model.pkl saved")
 
