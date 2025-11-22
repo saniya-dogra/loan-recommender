@@ -4,12 +4,12 @@ url = "http://127.0.0.1:5000/predict"
 
 data = {
     "age": 30,
-    "income": 60000,
+    "income": 6000,
     "credit_score": 720,
-    "employment_type": "salaried",
+    "employment_type": "unsalaried",
     "loan_amount": 200000,
     "loan_tenure": 5,
-    "interest_rate": 11.5
+    "interest_rate": 8
 }
 
 response = requests.post(url, json=data)
